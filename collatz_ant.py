@@ -47,49 +47,6 @@ def move_forward(position: Position, orientation: int, version: str) -> Position
     raise ValueError(f"Invalid orientation {orientation}")
 
 
-def count_loops(grid: Dict[Position, int]) -> int:
-    """Return the number of enclosed empty regions in ``grid``."""
-    if not grid:
-        return 0
-
-    xs = [x for x, _ in grid.keys()]
-    ys = [y for _, y in grid.keys()]
-    min_x, max_x = min(xs) - 1, max(xs) + 1
-    min_y, max_y = min(ys) - 1, max(ys) + 1
-    width = max_x - min_x + 1
-    height = max_y - min_y + 1
-
-    # build binary map of visited cells
-    visited_map = [[0] * width for _ in range(height)]
-    for x, y in grid.keys():
-        row = max_y - y
-        col = x - min_x
-        visited_map[row][col] = 1
-
-    dirs = [(1, 0), (-1, 0), (0, 1), (0, -1)]
-    seen = [[False] * width for _ in range(height)]
-    loops = 0
-
-    for r in range(height):
-        for c in range(width):
-            if visited_map[r][c] == 0 and not seen[r][c]:
-                queue = deque([(r, c)])
-                seen[r][c] = True
-                touches_border = False
-                while queue:
-                    cr, cc = queue.popleft()
-                    if cr == 0 or cr == height - 1 or cc == 0 or cc == width - 1:
-                        touches_border = True
-                    for dr, dc in dirs:
-                        nr, nc = cr + dr, cc + dc
-                        if 0 <= nr < height and 0 <= nc < width:
-                            if visited_map[nr][nc] == 0 and not seen[nr][nc]:
-                                seen[nr][nc] = True
-                                queue.append((nr, nc))
-                if not touches_border:
-                    loops += 1
-    return loops
-
 
 @dataclass
 class CollatzAnt:
@@ -115,23 +72,20 @@ class CollatzAnt:
             raise ValueError(f"Unknown version {self.version}")
 
     def step(self) -> Tuple[Position, int]:
-        """Advance the ant by a single step.
-
-        Returns a tuple ``(position, value)`` of the new cell the ant lands on.
-        """
-
-        current_value = self.grid[self.position]
+        current_value = self.grid.get(self.position, self.start_value)
+        
         if current_value % 2 == 0:
             self.orientation = turn_right(self.orientation, self.orientation_mod)
             new_value = current_value // 2
         else:
             self.orientation = turn_left(self.orientation, self.orientation_mod)
             new_value = 3 * current_value + 1
-
+    
         self.position = move_forward(self.position, self.orientation, self.version)
+        
         self.grid[self.position] = new_value
         self.steps_taken += 1
-
+    
         return self.position, new_value
 
     def update_loop_count(self) -> int:
